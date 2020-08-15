@@ -1,5 +1,8 @@
 SET NOCOUNT ON;
 USE ConferenceMessaging;
+
+--note, this script works for the MemoryOptimized version as well
+--USE ConferenceMessagingMemoryOptimized
 GO
 DELETE FROM Messages.MessageTopic ;
 DELETE FROM Messages.Message;
@@ -180,7 +183,7 @@ BEGIN CATCH
 END CATCH;
 
 
-
+GO
 
 DECLARE @TestName nvarchar(100) = 'UserHandle characters allowed didn''t work';
 BEGIN TRY --Check UserHandle Check Constraint
