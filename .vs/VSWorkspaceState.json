@@ -1,8 +1,12 @@
 {
   "ExpandedNodes": [
     "",
-    "\\Chapter 7"
+    "\\Chapter 07",
+    "\\Chapter 08",
+    "\\Chapter 13",
+    "\\Extended Examples",
+    "\\Useful Code"
   ],
-  "SelectedNode": "\\Chapter 7\\Chapter 7 – Database Create Objects.sql",
+  "SelectedNode": "\\Chapter 13\\Chapter 13.sql",
   "PreviewInSolutionExplorer": false
 }
