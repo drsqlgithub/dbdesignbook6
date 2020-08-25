@@ -1,4 +1,7 @@
+--this statement prevents you from running the entire file accidentally when you have 
+--sqlcmd mode turned on, which I do by default
 EXIT
+
 
 ----------------------------------------------------------------------------------------------------------
 --********************************************************************************************************

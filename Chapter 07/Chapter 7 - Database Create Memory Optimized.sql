@@ -73,6 +73,13 @@ CREATE TABLE Attendees.MessagingUser (
 		CONSTRAINT PKMessagingUser PRIMARY KEY NONCLUSTERED HASH (MessagingUserId) WITH (BUCKET_COUNT=10000)
 )WITH (MEMORY_OPTIMIZED = ON, DURABILITY = SCHEMA_AND_DATA);
 
+/*
+Note: rowversion/timestamp is not available to memory optimized tables. If you try to add one, you get:
+
+Msg 10794, Level 16, State 88, Line 62
+The type 'timestamp' is not supported with memory optimized tables.
+*/
+
 CREATE TABLE Attendees.UserConnection
 ( 
         UserConnectionId     int NOT NULL IDENTITY ( 1,1 ) ,
