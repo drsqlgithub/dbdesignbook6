@@ -1289,7 +1289,7 @@ WITH SCHEMABINDING, EXECUTE AS CALLER AS
 BEGIN
        DECLARE @start int, @end int
        --add commas to end and start
-       SET @inputValue = N',' + @inputValue + N',';
+       SET @inputValue = @delimiter + @inputValue + @delimiter;
 
        WITH BaseRows AS (
             SELECT Number.I, 

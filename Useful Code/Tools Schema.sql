@@ -19,42 +19,6 @@ AS
   END;
 GO
 
-CREATE OR ALTER FUNCTION Tools.String$SplitPart
-(
-    @inputValue nvarchar(4000),
-    @delimiter  nchar(1) = ',',  
-    @position   int = 1
-)
-------------------------------------------------------------------------
--- Helps to normalize a delimited string by fetching one value from the
--- list. (note, can’t use STRING_SPLIT because return order not guaranteed)
---
--- 2020 Louis Davidson – drsql@hotmail.com – drsql.org 
-------------------------------------------------------------------------
-RETURNS nvarchar(4000)
-WITH SCHEMABINDING, EXECUTE AS CALLER AS
-BEGIN
-       DECLARE @start int, @end int
-       --add commas to end and start
-       SET @inputValue = N',' + @inputValue + N',';
-
-       WITH BaseRows AS (
-            SELECT Number.I, 
-                   ROW_NUMBER() OVER (ORDER BY Number.I) AS StartPosition, 
-                   ROW_NUMBER() OVER (ORDER BY Number.I) - 1 AS EndPosition
-            FROM   Tools.Number
-            WHERE  Number.I <= LEN(@inputValue)
-             AND  SUBSTRING(@inputValue,Number.I,1) = @delimiter
-       )                   --+1 to deal with commas
-       SELECT @start = (SELECT BaseRows.I + 1 FROM BaseRows 
-                        WHERE BaseRows.StartPosition = @Position),
-              @end = (  SELECT BaseRows.I FROM BaseRows 
-                        WHERE BaseRows.EndPosition = @Position)
-
-       RETURN SUBSTRING(@inputValue,@start,@end - @start)
- END;
- GO
-
  CREATE OR ALTER PROCEDURE Tools.Table$ListExtendedProperties
 	@schema_name_like sysname = '%',
 	@table_name_like sysname = '%',
@@ -185,4 +149,123 @@ FROM    Dates
 WHERE   Dates.NewDateValue BETWEEN '20000101' AND @enddate
   AND   Dates.NewDateValue NOT IN (SELECT DateValue FROM Tools.Calendar)
 ORDER   BY DateValue;
+
+GO
+CREATE OR ALTER FUNCTION Tools.String$SplitPart
+(
+    @inputValue nvarchar(4000),
+    @delimiter  nchar(1) = ',',  
+    @position   int = 1
+)
+------------------------------------------------------------------------
+-- Helps to normalize a delimited string by fetching one value from the
+-- list. (note, can’t use STRING_SPLIT because return order not guaranteed)
+--
+-- 2020 Louis Davidson – drsql@hotmail.com – drsql.org 
+------------------------------------------------------------------------
+RETURNS nvarchar(4000)
+WITH SCHEMABINDING, EXECUTE AS CALLER AS
+BEGIN
+       DECLARE @start int, @end int
+       --add commas to end and start
+       SET @inputValue = @delimiter + @inputValue + @delimiter;
+
+       WITH BaseRows AS (
+            SELECT Number.I, 
+                   ROW_NUMBER() OVER (ORDER BY Number.I) AS StartPosition, 
+                   ROW_NUMBER() OVER (ORDER BY Number.I) - 1 AS EndPosition
+            FROM   Tools.Number
+            WHERE  Number.I <= LEN(@inputValue)
+             AND  SUBSTRING(@inputValue,Number.I,1) = @delimiter
+       )                   --+1 to deal with commas
+       SELECT @start = (SELECT BaseRows.I + 1 FROM BaseRows 
+                        WHERE BaseRows.StartPosition = @Position),
+              @end = (  SELECT BaseRows.I FROM BaseRows 
+                        WHERE BaseRows.EndPosition = @Position)
+
+       RETURN SUBSTRING(@inputValue,@start,@end - @start)
+ END;
+ GO
+
+ CREATE OR ALTER FUNCTION Tools.Number$Translate3DigitsToWords
+(
+	@NumberToTranslate numeric(3,0)
+)
+RETURNS varchar(100)
+AS
+BEGIN
+	IF @NumberToTranslate = 0
+		RETURN null
+
+	DECLARE @NumberToTranslateText varchar(3), @output nvarchar(500)
+	SET @NumberToTranslateText = RIGHT(REPLICATE('0',3) + CAST(@numberToTranslate AS nvarchar(3)),3)
+
+	DECLARE @FirstDigit table (Value char(1), Word varchar(10))
+	INSERT INTO @FirstDigit(Value, Word)
+	values('0',''),('1','One'),
+	('2','Two'),('3','Three'),('4','Four'),('5','Five'),
+	('6','Six'),('7','Seven'),('8','Eight'),('9','Nine')
+
+	DECLARE @Teens table (Value char(2), Word varchar(10))
+	INSERT INTO @Teens(Value, Word)
+	VALUES ('10','Ten'),('11','Eleven'),('12','Twelve'),('13','Thirteen'),
+	('14','Forteen'),('15','Fifteen'),('16','Sixteen'),
+	('17','Seventeen'),('18','Eighteen'),('19','Nineteen')
+
+
+	DECLARE @Tens table (Value char(1), Word varchar(10))
+	INSERT INTO @Tens(Value, Word)
+	VALUES('0',''),('2','Twenty'),('3','Thirty'),
+	('4','Forty'),('5','Fifty'),('6','Sixty'),
+	('7','Seventy'),('8','Eighty'),('9','Ninety')
+
+	SELECT @Output = Word
+	FROM   @Teens
+	WHERE  Value = SUBSTRING(@NumberToTranslateText,2,2)
+
+	IF @output IS NULL
+		SELECT @output = word
+		FROM @FirstDigit
+		WHERE  Value = SUBSTRING(@NumberToTranslateText,3,1) 
+
+	SELECT @output = CONCAT(Word, IIF(@output = '' ,'','-'), + @output )
+	FROM  @Tens
+	WHERE  Value = SUBSTRING(@NumberToTranslateText,2,1)
+	  AND  SUBSTRING(@NumberToTranslateText,2,1) <>  0
+
+	SELECT @output = CONCAT(Word, '-Hundred ', IIF(@output = '','','and '), @output)
+	FROM  @FirstDigit
+	WHERE  Value = SUBSTRING(@NumberToTranslateText,1,1)
+	  AND  SUBSTRING(@NumberToTranslateText,1,1) <> '0'
+
+	RETURN TRIM(@output)
+ END
+ GO
+
+ CREATE OR ALTER FUNCTION Tools.Number$TranslateToWords
+(
+	@NumberToTranslate numeric(15,0)
+)
+RETURNS varchar(100)
+AS
+BEGIN
+
+	DECLARE @NumberToTranslateText varchar(15), @output nvarchar(100)
+	SET @NumberToTranslateText = RIGHT(REPLICATE('0',15)  + CAST(@numberToTranslate AS nvarchar(15)),15)
+
+	RETURN(
+	SELECT CONCAT(
+	Tools.Number$Translate3DigitsToWords(SUBSTRING(@NumberToTranslateText,1,3)) + '-Trillion, '
+	,
+	 Tools.Number$Translate3DigitsToWords(SUBSTRING(@NumberToTranslateText,4,3)) + '-Billion, '
+	,
+	Tools.Number$Translate3DigitsToWords(SUBSTRING(@NumberToTranslateText,7,3)) + '-Million, '
+	,
+	 Tools.Number$Translate3DigitsToWords(SUBSTRING(@NumberToTranslateText,10,3)) + '-Thousand, '
+	,	
+	CASE WHEN @NumberToTranslate > 100 AND CAST(SUBSTRING(@NumberToTranslateText,13,3) AS int) < 100 THEN ' and ' END
+	,
+	Tools.Number$Translate3DigitsToWords(SUBSTRING(@NumberToTranslateText,13,3)))
+	)
+END
 
