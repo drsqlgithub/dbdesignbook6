@@ -151,6 +151,7 @@ WHERE   Dates.NewDateValue BETWEEN '20000101' AND @enddate
 ORDER   BY DateValue;
 
 GO
+
 CREATE OR ALTER FUNCTION Tools.String$SplitPart
 (
     @inputValue nvarchar(4000),
