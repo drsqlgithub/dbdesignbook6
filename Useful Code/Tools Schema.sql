@@ -14,7 +14,7 @@ RETURNS nvarchar(4000)
 AS
   BEGIN
 	RETURN (CASE WHEN @surroundOutputFlag = 1 THEN @character END
-	       +REPLACE(@inputString,'''','''''')
+	       +REPLACE(@inputString,@character,@character+@character)
 	       +CASE WHEN @surroundOutputFlag = 1 THEN @character END)
   END;
 GO
